@@ -20,9 +20,8 @@ mkShell {
     pkg-config
     git
     rust_latest
-
-    rust-analyzer
-    rls
+  
+    # rls
     lldb
   ];
 

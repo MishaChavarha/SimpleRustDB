@@ -18,7 +18,11 @@ impl Page {
         }
     }
 
-    pub fn write_int(&mut self, offset: u64, data: i32)->Result<()>{
+    pub fn contents(&mut self) -> &mut [u8]{
+        return self.buffer.get_mut().as_mut_slice();
+    }
+
+    pub fn write_int(&mut self, offset: u64, data: i32) -> Result<()>{
         
         self.buffer.set_position(offset as u64);
         return self.buffer.write_i32::<LittleEndian>(data);

@@ -1,19 +1,23 @@
 #[derive(PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 pub struct BlockId {
-    file_name: String,
-    block_number: u64
+    file: String,
+    number: u64
 }
 
 impl BlockId {
-    pub fn new(file_name:String, block_number: u64) -> BlockId {
+    pub fn new(file:String, number: u64) -> BlockId {
         BlockId{
-            file_name,
-            block_number
+            file,
+            number
         }
     }
 
-    pub fn block_number(&self) -> u64{
-        return self.block_number;
+    pub fn number(&self) -> u64{
+        return self.number;
+    }
+
+    pub fn file(&self) -> &str{
+        return &self.file;
     }
 }
 
@@ -24,13 +28,13 @@ mod test {
     #[test]
     fn test_block_number(){
         let block = BlockId::new(String::from("abcd"),23);
-        assert_eq!(block.block_number,23)
+        assert_eq!(block.number,23)
     }
 
     #[test]
     fn test_block_number_err(){
         let block = BlockId::new(String::from("abcd"),23);
-        assert_ne!(block.block_number,25)
+        assert_ne!(block.number,25)
     }
 
 }

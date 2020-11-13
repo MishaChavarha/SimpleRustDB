@@ -2,6 +2,7 @@ let
   rust_moz_overlay = import (builtins.fetchTarball https://github.com/mozilla/nixpkgs-mozilla/archive/master.tar.gz);
 in
 with import <nixpkgs> {
+  
   overlays = [ rust_moz_overlay ];
 };
 let
@@ -24,7 +25,7 @@ mkShell {
     # rustup
     pkg-config
     git
-    rust_latest_override
+    rust_latest
     # unstable.rust-analyzer
   
     # rls

@@ -2,7 +2,7 @@ extern crate byteorder;
 
 use byteorder::{LittleEndian,ReadBytesExt,WriteBytesExt};
 use std::io::*;
-
+#[derive(Debug)]
 pub struct Page {
     buffer: Cursor<Vec<u8>>,
 }
@@ -13,11 +13,14 @@ pub struct Page {
 
 impl Page {
     pub fn new(buffer_size: u64) -> Page{
+
+        let mut buffer = Cursor::new(vec![0 as u8;buffer_size as usize]);
+
+        // assert_eq!(buffer.get_mut().len(),buffer_size as usize);
         Page{
-            buffer: Cursor::new(Vec::with_capacity(buffer_size as usize)),
+            buffer: buffer,
         }
     }
-
     pub fn contents(&mut self) -> &mut [u8]{
         return self.buffer.get_mut().as_mut_slice();
     }
@@ -48,10 +51,11 @@ impl Page {
     pub fn read_bytes(&mut self, offset: u64) -> Result<&[u8]>{
 
         self.buffer.set_position(offset);
-        let size = self.buffer.read_u32::<LittleEndian>().unwrap() as usize;
+        let size = self.buffer.read_u32::<LittleEndian>().unwrap();
+        println!("size readbytes {}", size);
         let pos = self.buffer.position() as usize;
-        assert_eq!(offset+4,pos as u64,"offfset {} and {} are equal", offset+4, pos);
-        let slice = &self.buffer.get_ref()[pos..pos+size];
+        // assert_eq!(offset+4,pos as u64,"offfset {} and {} are equal", offset+4, pos);
+        let slice = &self.buffer.get_ref()[pos..pos+size as usize];
 
         // check for errorrs when it does not fit the slice. 
 

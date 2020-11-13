@@ -57,8 +57,6 @@ impl FileManager {
         let raf = open_files.get(block.file()).unwrap();
         let result = raf.read_at(block.number()*self.block_size, page.contents());
 
-
-
         // let file = self.open_files.lock().unwrap().get(block.file_name()).unwrap_or_else(new_file(block.file_name()));
 
         return Ok(());

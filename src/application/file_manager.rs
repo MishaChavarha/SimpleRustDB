@@ -1,166 +1,96 @@
+extern crate lazy_static;
+
 pub mod block;
-#[path="page.rs"]
 pub mod page;
+
+mod storage;
 
 use std::{fs::OpenOptions, io::Result};
 use std::fs::File;
 use std::path::PathBuf;
 use std::collections::HashMap;
-use std::sync::Mutex;
 use std::fs;
-
+use std::path::Path;
+use std::io::*;
 use page::Page;
 
-use positioned_io_preview as positioned_io;
-use positioned_io::{ReadAt,WriteAt};
+use random_access_disk::RandomAccessDisk;
+
+use self::storage::Storage;
 
 use super::WORK_DIR;
 use block::Block;
+use std::sync::{Arc, Mutex};
 
 
 
+#[derive(Debug)]
 pub struct FileManager {
 
-    block_size: u64,
-    db_path: PathBuf,
-    files: Mutex<HashMap<String,File>>
+    fm: Arc<Mutex<Storage>>
+
+    // storage: CHashMap<String,Mutex<V>>
     
 }
 
 impl FileManager {
 
-    pub fn new(db_name:&str,block_size:u64) -> Result<FileManager>{
+    pub fn new(db_path:&str, block_size: u64) -> Result<FileManager>{
+        let fm = 
+            Storage::new(db_path, block_size)?;
 
-        let mut db_path = PathBuf::new();
-        db_path.push(WORK_DIR);
-        db_path.push(db_name);
+        Ok(FileManager {
+            fm:Arc::new(Mutex::new(fm)),
+        })
+    }
+
+    pub fn read(&self, block: &Block, page: &mut Page) -> Result<()> {
+        
+        let mut storage = self.fm.lock().unwrap();
+        let file = block.file();
+        let offset = block.id();
+        let buffer = page.buffer();
+        
+        storage.read(file,buffer,offset)?;
+
+        Ok(())
+    }
     
-        if !db_path.exists() {
-            print!("1234");
-            fs::create_dir(&db_path)?;
-        }
+    pub fn write(&self, block: &Block, page: &mut Page) -> Result<()>{
 
-        Ok(
-            FileManager{
-                block_size: block_size,
-                db_path: db_path,
-                files: Mutex::new(HashMap::new())
-            }
-        )
-    }
-
-    pub fn read(&mut self, block:&Block, page: &mut Page) -> Result<()>{
-
-        self.db_path.push(block.file());
-        let path = self.db_path.as_path();
-
-        let mut files = self.files.lock().unwrap();
-
-        let entry = files.entry(String::from(block.file())).or_insert_with(|| {
-            OpenOptions::new().write(true).create(true).read(true)
-                .open(path).unwrap()});
+        let mut storage = self.fm.lock().unwrap();
+        let file = block.file();
+        let offset = block.id();
+        let buffer = page.buffer();
         
-        entry.read_at(self.block_size*block.id(), page.buffer())?; 
-        
-        self.db_path.pop();
+        storage.write(file,buffer,offset)?;
 
         Ok(())
     }
 
-    pub fn write(&mut self, block:&Block, page: &mut Page) -> Result<()>{
+    pub fn length(&self, file:&str) -> Result<u64> {
 
-        self.db_path.push(block.file());
-        let path = self.db_path.as_path();
-
-        let mut files = self.files.lock().unwrap();
-
-        let entry = files.entry(String::from(block.file())).or_insert_with(|| {
-            OpenOptions::new().write(true).create(true).read(true)
-                .open(path).unwrap()});
-        
-        entry.write_at(self.block_size*block.id(), page.buffer())?;      
-        
-        self.db_path.pop();
-
-        Ok(())
-    }
-
-    // creates new block inside a file; 
-    pub fn block(&mut self, file: &str) -> Result<Block> {
-
-        self.db_path.push(file);
-        let path = self.db_path.as_path();
-
-        let mut files = self.files.lock().unwrap();
-
-        let entry = files.entry(String::from(file)).or_insert_with(|| {
-            OpenOptions::new().write(true).create(true).read(true)
-                .open(path).unwrap()});
-
-        let length = fs::metadata(self.db_path.as_path()).unwrap().len();
-
-        let block_number = length / self.block_size;
-
-        let mut buffer = Vec::with_capacity(self.block_size as usize);
-        entry.read_at(block_number*self.block_size, buffer.as_mut_slice())?;
-
-        self.db_path.pop();
-
-        Ok(Block::new(file,block_number))
+        self.length(file)
 
     }
 
-    // pub (super) fn new_block(file: &str) -> Result<Block>{
+    pub fn block(&self, file:&str) -> Result<Block> {
 
-    // }
+        let mut storage = self.fm.lock().unwrap();
+        let block = storage.block(file)?;
 
-    // pub (self) fn create_and(&self, file: &str) -> Result<()>{
 
-    //     self.db_path.push(file);
-    //     let file = OpenOptions::new().write(true).create(true).read(true).
-    //         open(self.db_path.as_path())?;
-
-    //     self.db_path.pop();
-        
-
-    //     // if !files.contains_key(filestr) {
-
-    //     //     let mut path: PathBuf = PathBuf::new();
-    //     //     path.push(self.directory.as_path());  
-    //     //     path.push(filestr);
-
-    //     //     // create new file 
-    //     //     let file = OpenOptions::new().write(true).create(true).read(true).open(path)?;
-    //     //     // let raf = RandomAccessFile::try_new(file)?;
-    //     //     open_files.insert(String::from(filestr), file);
-    //     // }
-    //     // return Ok(());
-        
-    //     // check if directory exists in the directory folder 
-
-    //     // create file if file does not exist 
-
-    //     // 
-
-    //     //
-
-    // }
+        return Ok(block);
+    }
 
 }
 
-// fn db_path(db_name:&str) -> PathBuf{
-
-//     let mut db_path = PathBuf::new();
-//     db_path.push(WORK_DIR);
-//     db_path.push(db_name);
-
-//     return db_path;
-// }
-
 #[cfg(test)]
 mod test {
-    use std::fs;
+    use std::{path::PathBuf, fs};
     // use crate::file_manager::{block_id::BlockId, page::*};
+
+    use crate::application::WORK_DIR;
 
     use super::{FileManager,Page};
 
@@ -169,33 +99,37 @@ mod test {
 
     // creates a database directory FMTEST and then deletes it; 
 
-    #[test]
-    fn test_cnstr_new_dir(){
+    // #[test]
+    // fn test_cnstr_new_dir(){
 
-        // creates and delets dB directory;
-        let fm = FileManager::new(DB_DIR,BLOCK_SIZE).unwrap();
-        fs::remove_dir_all(fm.db_path.as_path()).unwrap();
+    //     // creates and delets dB directory;
+    //     let fm = FileManager::new(DB_DIR,BLOCK_SIZE).unwrap();
+    //     fs::remove_dir_all(fm.db_path.as_path()).unwrap();
   
-    }
+    // }
 
 
     #[test]
     fn test_file_manager(){
 
-        let mut  fm = FileManager::new(DB_DIR,BLOCK_SIZE).unwrap();
+        let mut db_dir = PathBuf::new();
+        db_dir.push(WORK_DIR);
+        db_dir.push(DB_DIR);
+
+        let mut fm = FileManager::new(db_dir.as_path().to_str().unwrap(),BLOCK_SIZE).unwrap();
         let mut page1 = Page::new(BLOCK_SIZE);
-        let block = &fm.block("testname").unwrap();
+        let block = fm.block("testname").unwrap();
 
         let offset = 0; 
 
         page1.write_bytes(offset, "1234567890".as_bytes()).unwrap();
 
         // save page1 into the file
-        fm.write(block, &mut page1).unwrap();
+        fm.write(&block, &mut page1).unwrap();
 
          // define another page; 
         let mut page2 = Page::new(500);
-        fm.read(block, &mut page2).unwrap();
+        fm.read(&block, &mut page2).unwrap();
 
         assert_eq!(page2.read_bytes(offset).unwrap(),"1234567890".as_bytes());
 

@@ -1,5 +1,4 @@
 pub mod application;
-use application::application_run;
 // mod page;
 
 // use std::string::*;
@@ -7,5 +6,5 @@ use application::application_run;
 // use std::io::Cursor;
 
 fn main() {
-    application_run();
+    // application_run();
 }

@@ -11,7 +11,7 @@ let
   };
 
   rust_latest = latest.rustChannels.nightly.rust;
-
+  ruststable = latest.rustChannels.stable.rust.override { extensions = [ "rust-src" "rls-preview" "rust-analysis" "rustfmt-preview" ];};
 
 in
 mkShell {
@@ -24,7 +24,8 @@ mkShell {
     # rustup
     pkg-config
     git
-    rust_latest_override
+    ruststable
+    # rust_latest_override
     # unstable.rust-analyzer
   
     # rls

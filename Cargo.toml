@@ -9,3 +9,10 @@ edition = "2018"
 [dependencies]
 byteorder = "1.3.4"
 positioned-io-preview = "0.3.3"
+lazy_static = "1.4.0"
+
+random-access-disk = "2.0.0"
+random-access-storage = "4.0.0"
+
+
+futures = "0.3.8"
